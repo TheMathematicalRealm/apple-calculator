@@ -4,7 +4,7 @@ let menuHistory = []; // keeps track of navigation history
 
 // ---------------- MAIN MENU ----------------
 const mainMenu = [
-  { label: "Basic", url: "calculator.html", logo: "🧮" },
+  { label: "Basic", url: "index.html", logo: "🧮" },
   { label: "Scientific", url: "scientific.html", logo: "📐" },
   { label: "Graph", url: "graph.html", logo: "📊" },
   { label: "Convert", url: "convert.html", logo: "🔄" },
