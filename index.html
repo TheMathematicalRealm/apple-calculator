@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Apple Style Calculator</title>
-  <link rel="stylesheet" href="./styles/menu.css">
   <style>
     body {
       margin: 0;
@@ -35,6 +34,7 @@
       font-size: 2.5rem;
       color: white;
       flex-grow: 1;
+      overflow-x: auto;
     }
 
     .previous {
@@ -72,10 +72,6 @@
       color: black;
     }
 
-    .zero {
-      grid-column: span 1;
-    }
-
     /* Calculator icon styling */
     #calculator-icon {
       font-size: 1.8rem;
@@ -91,22 +87,154 @@
   <div class="calculator">
     <!-- Display -->
     <div class="display">
-      <div class="previous" id="previous">38,670 ÷ 50,000</div>
-      <div id="current">0.7734</div>
+      <div class="previous" id="previous"></div>
+      <div id="current">0</div>
     </div>
 
     <!-- Buttons -->
     <div class="buttons">
-      <button class="special">AC</button>
-      <button class="special">+/-</button>
-      <button class="special">%</button>
-      <button class="operator">÷</button>
+      <button class="special" data-action="clear">AC</button>
+      <button class="special" data-action="sign">+/-</button>
+      <button class="special" data-action="percent">%</button>
+      <button class="operator" data-action="divide">÷</button>
 
       <button>7</button>
       <button>8</button>
       <button>9</button>
-      <button class="operator">×</button>
+      <button class="operator" data-action="multiply">×</button>
 
+      <button>4</button>
+      <button>5</button>
+      <button>6</button>
+      <button class="operator" data-action="subtract">−</button>
+
+      <button>1</button>
+      <button>2</button>
+      <button>3</button>
+      <button class="operator" data-action="add">+</button>
+
+      <!-- Bottom row -->
+      <button id="calculator-icon">🧮</button>
+      <button class="zero">0</button>
+      <button>.</button>
+      <button class="operator" data-action="equals">=</button>
+    </div>
+  </div>
+
+  <script>
+    const previous = document.getElementById("previous");
+    const current = document.getElementById("current");
+    const buttons = document.querySelectorAll("button");
+
+    let currentOperand = "0";
+    let previousOperand = "";
+    let operator = null;
+
+    function updateDisplay() {
+      current.textContent = currentOperand;
+      previous.textContent = previousOperand;
+    }
+
+    function clear() {
+      currentOperand = "0";
+      previousOperand = "";
+      operator = null;
+    }
+
+    function appendNumber(number) {
+      if (currentOperand === "0" && number !== ".") {
+        currentOperand = number;
+      } else {
+        if (number === "." && currentOperand.includes(".")) return;
+        currentOperand += number;
+      }
+    }
+
+    function chooseOperator(op) {
+      if (currentOperand === "") return;
+      if (previousOperand !== "") compute();
+      operator = op;
+      previousOperand = currentOperand + " " + op;
+      currentOperand = "";
+    }
+
+    function compute() {
+      const prev = parseFloat(previousOperand);
+      const curr = parseFloat(currentOperand);
+      if (isNaN(prev) || isNaN(curr)) return;
+      let computation;
+      switch (operator) {
+        case "+":
+          computation = prev + curr;
+          break;
+        case "−":
+          computation = prev - curr;
+          break;
+        case "×":
+          computation = prev * curr;
+          break;
+        case "÷":
+          computation = curr === 0 ? "Error" : prev / curr;
+          break;
+        default:
+          return;
+      }
+      currentOperand = computation.toString();
+      previousOperand = "";
+      operator = null;
+    }
+
+    function handlePercent() {
+      currentOperand = (parseFloat(currentOperand) / 100).toString();
+    }
+
+    function handleSign() {
+      currentOperand = (parseFloat(currentOperand) * -1).toString();
+    }
+
+    buttons.forEach(button => {
+      button.addEventListener("click", () => {
+        const action = button.dataset.action;
+        const value = button.textContent;
+
+        if (!action) {
+          appendNumber(value);
+        } else {
+          switch (action) {
+            case "clear":
+              clear();
+              break;
+            case "sign":
+              handleSign();
+              break;
+            case "percent":
+              handlePercent();
+              break;
+            case "divide":
+              chooseOperator("÷");
+              break;
+            case "multiply":
+              chooseOperator("×");
+              break;
+            case "subtract":
+              chooseOperator("−");
+              break;
+            case "add":
+              chooseOperator("+");
+              break;
+            case "equals":
+              compute();
+              break;
+          }
+        }
+        updateDisplay();
+      });
+    });
+
+    updateDisplay();
+  </script>
+</body>
+</html>
       <button>4</button>
       <button>5</button>
       <button>6</button>
