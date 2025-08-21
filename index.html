@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apple Style Calculator</title>
+  <link rel="stylesheet" href="./styles/menu.css">
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: black;
+      font-family: Arial, sans-serif;
+      color: white;
+    }
+
+    .calculator {
+      width: 100%;
+      max-width: 400px;
+      background: black;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .display {
+      text-align: right;
+      padding: 20px 10px;
+      font-size: 2.5rem;
+      color: white;
+      flex-grow: 1;
+    }
+
+    .previous {
+      font-size: 1.2rem;
+      color: gray;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    button {
+      height: 70px;
+      border: none;
+      border-radius: 50%;
+      font-size: 1.5rem;
+      color: white;
+      background: #333;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:active {
+      opacity: 0.7;
+    }
+
+    .operator {
+      background: orange;
+    }
+
+    .special {
+      background: #a5a5a5;
+      color: black;
+    }
+
+    .zero {
+      grid-column: span 1;
+    }
+
+    /* Calculator icon styling */
+    #calculator-icon {
+      font-size: 1.8rem;
+      background: #333;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="calculator">
+    <!-- Display -->
+    <div class="display">
+      <div class="previous" id="previous">38,670 ÷ 50,000</div>
+      <div id="current">0.7734</div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="buttons">
+      <button class="special">AC</button>
+      <button class="special">+/-</button>
+      <button class="special">%</button>
+      <button class="operator">÷</button>
+
+      <button>7</button>
+      <button>8</button>
+      <button>9</button>
+      <button class="operator">×</button>
+
+      <button>4</button>
+      <button>5</button>
+      <button>6</button>
+      <button class="operator">−</button>
+
+      <button>1</button>
+      <button>2</button>
+      <button>3</button>
+      <button class="operator">+</button>
+
+      <!-- Bottom row -->
+      <button id="calculator-icon">🧮</button>
+      <button class="zero">0</button>
+      <button>.</button>
+      <button class="operator">=</button>
+    </div>
+  </div>
+
+  <!-- Modal container for icon -->
+  <div id="menu-modal" class="hidden"></div>
+  <script src="./scripts/menu.js"></script>
+</body>
+</html>
