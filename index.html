@@ -49,6 +49,18 @@
     .gray { background: #a5a5a5; color: black; }
     .orange { background: orange; color: white; }
     .dark { background: #333; color: white; }
+
+    /* Floating calculator menu button */
+    #calculator-icon {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: #444;
+      font-size: 1.8rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+    }
   </style>
 </head>
 <body>
@@ -74,13 +86,14 @@
     <button class="dark" data-value="3">3</button>
     <button class="orange" data-value="+">+</button>
 
-    <!-- Calculator icon beside 0 -->
-    <button class="dark" id="calculator-icon">🧮</button>
-    <button class="dark" data-value="0">0</button>
+    <button class="dark" style="grid-column: span 2;" data-value="0">0</button>
     <button class="dark" data-value=".">.</button>
     <button class="orange" id="equals">=</button>
   </div>
-  <div id="menu-modal" class="hidden"></div>
+
+  <!-- Floating menu button -->
+  <button id="calculator-icon">🧮</button>
+
   <script src="menu.js"></script>
   <script>
     const display = document.getElementById("display");
@@ -128,142 +141,14 @@
       }
     });
 
-    // Hook the calculator icon into menu.js
+    // Hook the floating button into menu.js
     document.getElementById("calculator-icon").addEventListener("click", () => {
       if (typeof openMenu === "function") {
-        openMenu(); // Use your menu.js logic
+        openMenu();
       } else {
         console.warn("menu.js not loaded or openMenu() not defined");
       }
     });
-  </script>
-</body>
-</html      <button class="operator" data-action="subtract">−</button>
-
-      <button>1</button>
-      <button>2</button>
-      <button>3</button>
-      <button class="operator" data-action="add">+</button>
-
-      <!-- Bottom row -->
-      <button id="calculator-icon">🧮</button>
-      <button class="zero">0</button>
-      <button>.</button>
-      <button class="operator" data-action="equals">=</button>
-    </div>
-  </div>
-  <div id="menu-modal" class="hidden"></div>
-  <script>
-    const previous = document.getElementById("previous");
-    const current = document.getElementById("current");
-    const buttons = document.querySelectorAll("button");
-
-    let currentOperand = "0";
-    let previousOperand = "";
-    let operator = null;
-
-    function updateDisplay() {
-      current.textContent = currentOperand;
-      previous.textContent = previousOperand;
-    }
-
-    function clear() {
-      currentOperand = "0";
-      previousOperand = "";
-      operator = null;
-    }
-
-    function appendNumber(number) {
-      if (currentOperand === "0" && number !== ".") {
-        currentOperand = number;
-      } else {
-        if (number === "." && currentOperand.includes(".")) return;
-        currentOperand += number;
-      }
-    }
-
-    function chooseOperator(op) {
-      if (currentOperand === "") return;
-      if (previousOperand !== "") compute();
-      operator = op;
-      previousOperand = currentOperand + " " + op;
-      currentOperand = "";
-    }
-
-    function compute() {
-      const prev = parseFloat(previousOperand);
-      const curr = parseFloat(currentOperand);
-      if (isNaN(prev) || isNaN(curr)) return;
-      let computation;
-      switch (operator) {
-        case "+":
-          computation = prev + curr;
-          break;
-        case "−":
-          computation = prev - curr;
-          break;
-        case "×":
-          computation = prev * curr;
-          break;
-        case "÷":
-          computation = curr === 0 ? "Error" : prev / curr;
-          break;
-        default:
-          return;
-      }
-      currentOperand = computation.toString();
-      previousOperand = "";
-      operator = null;
-    }
-
-    function handlePercent() {
-      currentOperand = (parseFloat(currentOperand) / 100).toString();
-    }
-
-    function handleSign() {
-      currentOperand = (parseFloat(currentOperand) * -1).toString();
-    }
-
-    buttons.forEach(button => {
-      button.addEventListener("click", () => {
-        const action = button.dataset.action;
-        const value = button.textContent;
-
-        if (!action) {
-          appendNumber(value);
-        } else {
-          switch (action) {
-            case "clear":
-              clear();
-              break;
-            case "sign":
-              handleSign();
-              break;
-            case "percent":
-              handlePercent();
-              break;
-            case "divide":
-              chooseOperator("÷");
-              break;
-            case "multiply":
-              chooseOperator("×");
-              break;
-            case "subtract":
-              chooseOperator("−");
-              break;
-            case "add":
-              chooseOperator("+");
-              break;
-            case "equals":
-              compute();
-              break;
-          }
-        }
-        updateDisplay();
-      });
-    });
-
-    updateDisplay();
   </script>
 </body>
 </html>
