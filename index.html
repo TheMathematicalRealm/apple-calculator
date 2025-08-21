@@ -3,110 +3,142 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Apple Style Calculator</title>
+  <title>Calculator</title>
   <style>
     body {
       margin: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
       background: black;
-      font-family: Arial, sans-serif;
       color: white;
-    }
-
-    .calculator {
-      width: 100%;
-      max-width: 400px;
-      background: black;
+      font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
+      align-items: center;
+      justify-content: flex-start;
       height: 100vh;
-      padding: 20px;
-      box-sizing: border-box;
     }
 
     .display {
+      font-size: 3rem;
       text-align: right;
-      padding: 20px 10px;
-      font-size: 2.5rem;
-      color: white;
-      flex-grow: 1;
-      overflow-x: auto;
-    }
-
-    .previous {
-      font-size: 1.2rem;
-      color: gray;
+      width: 100%;
+      padding: 20px;
+      box-sizing: border-box;
     }
 
     .buttons {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 10px;
+      width: 100%;
+      max-width: 400px;
+      padding: 10px;
     }
 
     button {
-      height: 70px;
+      font-size: 1.5rem;
       border: none;
       border-radius: 50%;
-      font-size: 1.5rem;
-      color: white;
-      background: #333;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    button:active {
-      opacity: 0.7;
-    }
-
-    .operator {
-      background: orange;
-    }
-
-    .special {
-      background: #a5a5a5;
-      color: black;
-    }
-
-    /* Calculator icon styling */
-    #calculator-icon {
-      font-size: 1.8rem;
-      background: #333;
-      border-radius: 50%;
+      height: 70px;
+      width: 70px;
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
+      cursor: pointer;
     }
+
+    .gray { background: #a5a5a5; color: black; }
+    .orange { background: orange; color: white; }
+    .dark { background: #333; color: white; }
   </style>
 </head>
 <body>
-  <div class="calculator">
-    <!-- Display -->
-    <div class="display">
-      <div class="previous" id="previous"></div>
-      <div id="current">0</div>
-    </div>
+  <div class="display" id="display">0</div>
+  <div class="buttons">
+    <button class="gray" id="clear">AC</button>
+    <button class="gray" id="sign">+/-</button>
+    <button class="gray" id="percent">%</button>
+    <button class="orange" data-value="/">÷</button>
 
-    <!-- Buttons -->
-    <div class="buttons">
-      <button class="special" data-action="clear">AC</button>
-      <button class="special" data-action="sign">+/-</button>
-      <button class="special" data-action="percent">%</button>
-      <button class="operator" data-action="divide">÷</button>
+    <button class="dark" data-value="7">7</button>
+    <button class="dark" data-value="8">8</button>
+    <button class="dark" data-value="9">9</button>
+    <button class="orange" data-value="*">×</button>
 
-      <button>7</button>
-      <button>8</button>
-      <button>9</button>
-      <button class="operator" data-action="multiply">×</button>
+    <button class="dark" data-value="4">4</button>
+    <button class="dark" data-value="5">5</button>
+    <button class="dark" data-value="6">6</button>
+    <button class="orange" data-value="-">−</button>
 
-      <button>4</button>
-      <button>5</button>
-      <button>6</button>
-      <button class="operator" data-action="subtract">−</button>
+    <button class="dark" data-value="1">1</button>
+    <button class="dark" data-value="2">2</button>
+    <button class="dark" data-value="3">3</button>
+    <button class="orange" data-value="+">+</button>
+
+    <!-- Calculator icon beside 0 -->
+    <button class="dark" id="calculator-icon">🧮</button>
+    <button class="dark" data-value="0">0</button>
+    <button class="dark" data-value=".">.</button>
+    <button class="orange" id="equals">=</button>
+  </div>
+
+  <script src="menu.js"></script>
+  <script>
+    const display = document.getElementById("display");
+    let current = "";
+    let resetNext = false;
+
+    document.querySelectorAll("[data-value]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (resetNext) {
+          current = "";
+          resetNext = false;
+        }
+        current += btn.getAttribute("data-value");
+        display.textContent = current;
+      });
+    });
+
+    document.getElementById("clear").addEventListener("click", () => {
+      current = "";
+      display.textContent = "0";
+    });
+
+    document.getElementById("equals").addEventListener("click", () => {
+      try {
+        current = eval(current).toString();
+        display.textContent = current;
+        resetNext = true;
+      } catch {
+        display.textContent = "Error";
+        current = "";
+      }
+    });
+
+    document.getElementById("sign").addEventListener("click", () => {
+      if (current) {
+        current = (parseFloat(current) * -1).toString();
+        display.textContent = current;
+      }
+    });
+
+    document.getElementById("percent").addEventListener("click", () => {
+      if (current) {
+        current = (parseFloat(current) / 100).toString();
+        display.textContent = current;
+      }
+    });
+
+    // Hook the calculator icon into menu.js
+    document.getElementById("calculator-icon").addEventListener("click", () => {
+      if (typeof openMenu === "function") {
+        openMenu(); // Use your menu.js logic
+      } else {
+        console.warn("menu.js not loaded or openMenu() not defined");
+      }
+    });
+  </script>
+</body>
+</html      <button class="operator" data-action="subtract">−</button>
 
       <button>1</button>
       <button>2</button>
