@@ -1,0 +1,49 @@
+.hidden {
+  display: none;
+}
+
+#menu-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #222;
+  color: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  width: 350px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  z-index: 9999;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.menu-item:hover {
+  background: #444;
+}
+
+.menu-item img {
+  width: 20px;
+  height: 20px;
+  margin-right: 8px;
+}
+
+.sidebar {
+  border-top: 1px solid #555;
+  margin: 8px 0;
+}
+
+/* Back button style */
+.menu-item:first-child {
+  font-weight: bold;
+  color: #ffd700; /* golden back button */
+}
