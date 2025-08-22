@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover" />
+<title>Apple-style Graph View (Canvas)</title>
+<style>
+  :root{
+    --bg: linear-gradient(180deg, #0b1020 0%, #0f1724 60%);
+    --glass: rgba(255,255,255,0.06);
+    --glass-2: rgba(255,255,255,0.04);
+    --accent: #5bd6ff;
+    --muted: rgba(255,255,255,0.7);
+    --round: 14px;
+  }
+
+  html,body{
+    height:100%;
+    margin:0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: var(--bg);
+    color: #fff;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
+
+  /* Container centers and constrains */
+  .wrap{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:22px;
+    box-sizing:border-box;
+  }
+
+  /* Graph card (frosted glass) */
+  .card{
+    width:100%;
+    max-width:820px;
+    height: min(88vh, 720px);
+    border-radius:22px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    box-shadow: 0 10px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+
+  /* Top bar contains title and controls */
+  .topbar{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px 16px;
+  }
+  .dot{
+    width:12px;height:12px;border-radius:50%;
+    background: linear-gradient(180deg,#ff5f56,#ffbd2e);
+    box-shadow:0 2px 6px rgba(0,0,0,0.6);
+  }
+  .title{
+    flex:1;
+    font-weight:600;
+    letter-spacing:0.2px;
+    font-size:15px;
+    color:var(--muted);
+  }
+
+  .controls{
+    display:flex;
+    gap:8px;
+    align-items:center;
+  }
+
+  button.icon-btn{
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.03);
+    padding:8px;
+    border-radius:10px;
+    color:var(--muted);
+    font-size:14px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:44px;
+    height:44px;
+  }
+  button.icon-btn:active{ transform: translateY(1px); }
+
+  /* Canvas fills remaining space */
+  .canvas-wrap{
+    flex:1;
+    position:relative;
+    display:flex;
+    align-items:stretch;
+  }
+  canvas{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+
+  /* Floating mini-toolbar (mobile-friendly) */
+  .toolbar{
+    position:absolute;
+    right:12px;
+    bottom:12px;
+    display:flex;
+    gap:8px;
+    flex-direction:column;
+    z-index:30;
+  }
+  .mini{
+    width:56px;height:56px;border-radius:14px;
+    background:var(--glass);
+    border:1px solid rgba(255,255,255,0.04);
+    box-shadow:0 6px 18px rgba(2,6,23,0.45);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:600;color:var(--muted);
+  }
+
+  /* Bottom control strip for equation input */
+  .equation-bar{
+    display:flex;
+    gap:10px;
+    padding:12px;
+    align-items:center;
+    border-top: 1px solid rgba(255,255,255,0.02);
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.015));
+  }
+  .eq-input{
+    flex:1;
+    min-width:0;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.03);
+    padding:10px 12px;
+    border-radius:12px;
+    color:#fff;
+    font-size:15px;
+    outline:none;
+  }
+  .eq-hint{ color:rgba(255,255,255,0.5); font-size:13px; margin-left:6px; }
+
+  /* Small readout bubble shown on touch/mouse */
+  .readout{
+    position:absolute;
+    pointer-events:none;
+    transform:translate(-50%,-110%);
+    background: rgba(0,0,0,0.55);
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.04);
+    font-size:13px;
+    color:#fff;
+    white-space:nowrap;
+    z-index:40;
+  }
+
+  /* Responsive tweaks */
+  @media (max-width:520px){
+    .card{ border-radius:16px; padding-bottom:8px; }
+    .topbar{ padding:10px; gap:8px; }
+    .title{ font-size:14px; }
+    .mini{ width:50px; height:50px; border-radius:12px; }
+    .eq-input{ font-size:14px; padding:9px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="card" role="application" aria-label="Graph view">
+    <div class="topbar" aria-hidden="false">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="dot" aria-hidden="true"></div>
+        <div class="title">Graph • Canvas</div>
+      </div>
+
+      <div class="controls" aria-hidden="false">
+        <button class="icon-btn" id="fitBtn" title="Fit to view">Fit</button>
+        <button class="icon-btn" id="gridBtn" title="Toggle grid">Grid</button>
+        <button class="icon-btn" id="styleBtn" title="Cycle style">Style</button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="c"></canvas>
+      <div id="readout" class="readout" style="display:none">x: 0, y: 0</div>
+
+      <div class="toolbar" aria-hidden="false">
+        <div class="mini" id="zoomIn" title="Zoom in">＋</div>
+        <div class="mini" id="zoomOut" title="Zoom out">－</div>
+        <div class="mini" id="reset" title="Reset">↺</div>
+      </div>
+    </div>
+
+    <div class="equation-bar" style="gap:8px;">
+      <input id="eq" class="eq-input" placeholder="y = sin(x)  —  examples: x^2, sin(x), cos(2*x), tan(x)/x, e^(-x)*sin(x)" />
+      <div class="eq-hint">Touch+drag to pan, pinch to zoom, tap to inspect</div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* Apple-style Graph View (Canvas)
+   Features:
+   - High-DPI rendering
+   - Pan (drag) + pinch zoom (touch) + mouse wheel zoom
+   - Grid, axes, tick labels
+   - Plot multiple equations (single input toggles currently)
+   - Smooth redraw with requestAnimationFrame
+   - Readout bubble on tap/mousemove
+*/
+
+/* ---------- Utilities ---------- */
+const $ = sel => document.querySelector(sel);
+
+/* Safe expression evaluator using Function (sandbox-ish).
+   Supports Math.* functions and simple constants.
+   Accepts 'x' variable. We'll restrict global access by providing Math only.
+*/
+function compileExpression(expr){
+  if(!expr || !expr.trim()) return null;
+  // Normalize caret ^ -> **
+  expr = expr.replace(/\^/g, '**');
+  // allow typical math names with Math. prefix
+  const allowed = [
+    'abs','acos','acosh','asin','asinh','atan','atan2','atanh',
+    'cbrt','ceil','clz32','cos','cosh','exp','expm1','floor',
+    'fround','hypot','imul','log','log10','log1p','log2','max',
+    'min','pow','random','round','sign','sin','sinh','sqrt','tan','tanh','PI','E'
+  ];
+  // replace plain names (e.g. sin(x)) to Math.sin(x) but don't double replace
+  allowed.forEach(name=>{
+    const re = new RegExp('\\b' + name + '\\b', 'g');
+    expr = expr.replace(re, 'Math.' + name);
+  });
+  // Restrict semicolons — disallow obvious bad input
+  if(/;/.test(expr)) throw new Error('Invalid character in expression');
+  // return function x => eval(...)
+  const f = new Function('x', 'Math', `return (${expr});`);
+  return x => {
+    try{ const v = f(x, Math); return (typeof v === 'number' && isFinite(v)) ? v : NaN; }
+    catch(e){ return NaN; }
+  };
+}
+
+/* ---------- Canvas graph state ---------- */
+const canvas = $('#c');
+const readout = $('#readout');
+const eqInput = $('#eq');
+
+let DPR = Math.max(1, window.devicePixelRatio || 1);
+let width = 0, height = 0;
+
+/* Camera: mapping world coords to screen pixels */
+const cam = {
+  x: 0,   // world x at canvas center
+  y: 0,   // world y at canvas center
+  scale: 60, // pixels per world-unit (x-scale). Higher -> zoom in
+  minScale: 6,
+  maxScale: 2000
+};
+
+let gridOn = true;
+let styleIndex = 0;
+const styles = [
+  {bg:'#071026', gridColor:'rgba(255,255,255,0.04)', axisColor:'rgba(255,255,255,0.14)', funcColors:['#5bd6ff','#8affc1','#f7ff7f']},
+  {bg:'#0b1020', gridColor:'rgba(255,255,255,0.03)', axisColor:'rgba(255,255,255,0.18)', funcColors:['#9be7ff','#ffd48a','#ff9ab6']},
+  {bg:'#061521', gridColor:'rgba(255,255,255,0.03)', axisColor:'rgba(255,255,255,0.15)', funcColors:['#89f4c0','#8cc0ff','#e9e0a8']}
+];
+
+let equations = ['sin(x)']; // initial equation(s)
+let compiled = [compileExpression(equations[0])];
+
+function setEquation(text){
+  try{
+    const f = compileExpression(text);
+    compiled = [f];
+    equations = [text];
+    eqInput.value = text;
+    draw();
+  }catch(e){
+    // fail silently but show placeholder
+    console.warn('Expression compile error', e);
+  }
+}
+
+/* ---------- Canvas helpers ---------- */
+function worldToScreen(wx, wy){
+  const cx = width/2, cy = height/2;
+  const sx = cx + (wx - cam.x) * cam.scale;
+  const sy = cy - (wy - cam.y) * cam.scale;
+  return [sx, sy];
+}
+function screenToWorld(sx, sy){
+  const cx = width/2, cy = height/2;
+  const wx = cam.x + (sx - cx) / cam.scale;
+  const wy = cam.y - (sy - cy) / cam.scale;
+  return [wx, wy];
+}
+
+/* ---------- Draw routine ---------- */
+const ctx = canvas.getContext('2d');
+
+function resize(){
+  DPR = Math.max(1, window.devicePixelRatio || 1);
+  const rect = canvas.getBoundingClientRect();
+  width = Math.max(1, Math.floor(rect.width));
+  height = Math.max(1, Math.floor(rect.height));
+  canvas.width = Math.floor(width * DPR);
+  canvas.height = Math.floor(height * DPR);
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0); // scale for DPR
+  draw(true);
+}
+
+let lastDrawStyle = -1;
+function draw(forceBg){
+  // background fill
+  const s = styles[styleIndex % styles.length];
+  if(forceBg || lastDrawStyle !== styleIndex){
+    ctx.fillStyle = s.bg;
+    ctx.fillRect(0,0,width,height);
+    lastDrawStyle = styleIndex;
+  } else {
+    // subtle overlay for retina crispness
+    ctx.fillStyle = 'rgba(0,0,0,0)'; ctx.fillRect(0,0,0,0);
+  }
+
+  // grid
+  const unitPx = cam.scale;
+  // choose grid spacing in world units (nice numbers)
+  const nice = [1,2,5,10,20,50,100,200,500,1000];
+  // choose spacing so that grid lines are ~60-180px apart
+  let gridStep = 1;
+  for(let g of nice){
+    if(g * unitPx >= 50 && g * unitPx <= 180){ gridStep = g; break; }
+  }
+
+  if(gridOn){
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = s.gridColor;
+    ctx.beginPath();
+    // vertical grid lines
+    const leftWX = cam.x - (width/2)/cam.scale;
+    const rightWX = cam.x + (width/2)/cam.scale;
+    const topWY = cam.y + (height/2)/cam.scale;
+    const bottomWY = cam.y - (height/2)/cam.scale;
+    const startX = Math.floor(leftWX / gridStep) * gridStep;
+    for(let gx = startX; gx <= rightWX; gx += gridStep){
+      const [sx] = worldToScreen(gx, 0);
+      ctx.moveTo(Math.round(sx)+0.5, 0);
+      ctx.lineTo(Math.round(sx)+0.5, height);
+    }
+    // horizontal grid lines
+    const startY = Math.floor(bottomWY / gridStep) * gridStep;
+    for(let gy = startY; gy <= topWY; gy += gridStep){
+      const [,sy] = worldToScreen(0, gy);
+      ctx.moveTo(0, Math.round(sy)+0.5);
+      ctx.lineTo(width, Math.round(sy)+0.5);
+    }
+    ctx.stroke();
+  }
+
+  // axes (x=0, y=0)
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = s.axisColor;
+  ctx.beginPath();
+  // y-axis
+  const [ax, ay] = worldToScreen(0,0);
+  // vertical axis
+  ctx.moveTo(Math.round(ax)+0.5, 0);
+  ctx.lineTo(Math.round(ax)+0.5, height);
+  // horizontal axis
+  ctx.moveTo(0, Math.round(ay)+0.5);
+  ctx.lineTo(width, Math.round(ay)+0.5);
+  ctx.stroke();
+
+  // tick labels
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.font = '12px system-ui, -apple-system, Roboto, "Helvetica Neue", Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  // x-ticks
+  const tickStep = gridStep;
+  const left = cam.x - (width/2)/cam.scale;
+  const right = cam.x + (width/2)/cam.scale;
+  const startTickX = Math.floor(left / tickStep) * tickStep;
+  for(let tx = startTickX; tx <= right; tx += tickStep){
+    const [sx, sy] = worldToScreen(tx, 0);
+    if(sx < -20 || sx > width + 20) continue;
+    ctx.fillText((+tx.toFixed(2)).replace(/\.00$/,''), sx, Math.round(ay)+6);
+  }
+  // y-ticks (left side)
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const top = cam.y + (height/2)/cam.scale;
+  const bottom = cam.y - (height/2)/cam.scale;
+  const startTickY = Math.floor(bottom / tickStep) * tickStep;
+  for(let ty = startTickY; ty <= top; ty += tickStep){
+    const [sx, sy] = worldToScreen(0, ty);
+    if(sy < -20 || sy > height + 20) continue;
+    ctx.fillText((+ty.toFixed(2)).replace(/\.00$/,''), Math.max(12, Math.round(ax)-8), sy);
+  }
+
+  // plot functions
+  const plotResolution = Math.max(1, Math.floor(1 * (1 / cam.scale) * 40)); // adaptive
+  ctx.lineWidth = 2.4;
+  compiled.forEach((fn, idx) => {
+    if(!fn) return;
+    ctx.beginPath();
+    ctx.strokeStyle = s.funcColors[idx % s.funcColors.length];
+    let started = false;
+    // sample across canvas width
+    const samples = Math.max(80, Math.floor(width / 2));
+    for(let i = 0; i <= samples; i++){
+      const sx = i / samples * width;
+      const [wx] = screenToWorld(sx, 0);
+      const wy = fn(wx);
+      if(!Number.isFinite(wy) || isNaN(wy)) { started = false; continue; }
+      const [px, py] = worldToScreen(wx, wy);
+      if(!started){
+        ctx.moveTo(px, py);
+        started = true;
+      } else {
+        ctx.lineTo(px, py);
+      }
+    }
+    ctx.stroke();
+
+    // small glow at center x=0 intersection (if near)
+    const yAt0 = fn(cam.x);
+    if(Number.isFinite(yAt0)){
+      const [gx, gy] = worldToScreen(cam.x, yAt0);
+      if(gx >= -20 && gx <= width+20 && gy >= -20 && gy <= height+20){
+        ctx.beginPath();
+        ctx.fillStyle = s.funcColors[idx % s.funcColors.length];
+        ctx.globalAlpha = 0.13;
+        ctx.arc(gx, gy, 12, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+  });
+}
+
+/* ---------- Interaction: pan, zoom, pointer ---------- */
+let isDragging = false;
+let dragStart = null;
+let camStart = null;
+let lastTap = 0;
+let lastTouches = null;
+
+function startDrag(sx, sy){
+  isDragging = true;
+  dragStart = {sx, sy};
+  camStart = {x: cam.x, y: cam.y};
+}
+function moveDrag(sx, sy){
+  if(!isDragging || !dragStart) return;
+  const dx = sx - dragStart.sx;
+  const dy = sy - dragStart.sy;
+  cam.x = camStart.x - dx / cam.scale;
+  cam.y = camStart.y + dy / cam.scale;
+  draw();
+}
+function endDrag(){
+  isDragging = false; dragStart = null; camStart = null;
+}
+
+canvas.addEventListener('pointerdown', e=>{
+  canvas.setPointerCapture(e.pointerId);
+  startDrag(e.clientX - canvas.getBoundingClientRect().left, e.clientY - canvas.getBoundingClientRect().top);
+});
+canvas.addEventListener('pointermove', e=>{
+  const r = canvas.getBoundingClientRect();
+  const sx = e.clientX - r.left;
+  const sy = e.clientY - r.top;
+  moveDrag(sx, sy);
+  showReadoutAt(sx, sy);
+});
+canvas.addEventListener('pointerup', e=>{
+  canvas.releasePointerCapture(e.pointerId);
+  endDrag();
+});
+canvas.addEventListener('pointercancel', endDrag);
+canvas.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  const zoomFactor = Math.exp(-e.deltaY * 0.0012);
+  zoomAt(zoomFactor, sx, sy);
+}, {passive:false});
+
+/* Touch gestures: pinch to zoom */
+canvas.addEventListener('touchstart', e=>{
+  lastTouches = e.touches;
+  if(e.touches.length === 1){
+    const t = e.touches[0];
+    startDrag(t.clientX - canvas.getBoundingClientRect().left, t.clientY - canvas.getBoundingClientRect().top);
+  } else {
+    // start pinch
+    endDrag();
+  }
+});
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  if(e.touches.length === 1){
+    const t = e.touches[0];
+    moveDrag(t.clientX - canvas.getBoundingClientRect().left, t.clientY - canvas.getBoundingClientRect().top);
+    showReadoutAt(t.clientX - canvas.getBoundingClientRect().left, t.clientY - canvas.getBoundingClientRect().top);
+  } else if(e.touches.length === 2){
+    const t0 = e.touches[0], t1 = e.touches[1];
+    const rect = canvas.getBoundingClientRect();
+    const dx = (t1.clientX - t0.clientX);
+    const dy = (t1.clientY - t0.clientY);
+    const dist = Math.hypot(dx, dy);
+    // compute previous distance
+    if(lastTouches && lastTouches.length === 2){
+      const p0 = lastTouches[0], p1 = lastTouches[1];
+      const pdx = (p1.clientX - p0.clientX);
+      const pdy = (p1.clientY - p0.clientY);
+      const pdist = Math.hypot(pdx, pdy);
+      if(pdist > 0){
+        const zoomFactor = dist / pdist;
+        // center point of pinch
+        const cx = (t0.clientX + t1.clientX) / 2 - rect.left;
+        const cy = (t0.clientY + t1.clientY) / 2 - rect.top;
+        zoomAt(zoomFactor, cx, cy);
+      }
+    }
+    lastTouches = [...e.touches];
+  }
+}, {passive:false});
+canvas.addEventListener('touchend', e=>{
+  if(e.touches.length === 0) endDrag();
+  lastTouches = e.touches;
+});
+
+/* Zoom helper: zoomAt(factor, screenX, screenY) */
+function zoomAt(factor, sx, sy){
+  const before = screenToWorld(sx, sy);
+  cam.scale *= factor;
+  cam.scale = Math.max(cam.minScale, Math.min(cam.maxScale, cam.scale));
+  const after = screenToWorld(sx, sy);
+  // keep the point under the cursor fixed
+  cam.x += (before[0] - after[0]);
+  cam.y += (before[1] - after[1]);
+  draw();
+}
+
+/* Readout bubble */
+let readoutTimeout = null;
+function showReadoutAt(sx, sy){
+  const [wx, wy] = screenToWorld(sx, sy);
+  readout.style.left = sx + 'px';
+  readout.style.top = sy + 'px';
+  readout.style.display = 'block';
+  readout.textContent = `x: ${wx.toFixed(3)}, y: ${wy.toFixed(3)}`;
+  // hide after 1.6s
+  clearTimeout(readoutTimeout);
+  readoutTimeout = setTimeout(()=>{ readout.style.display='none'; }, 1600);
+}
+
+/* ---------- UI buttons ---------- */
+$('#fitBtn').addEventListener('click', ()=>{
+  // Fit to view: center on x=0 and set scale so that a range fits
+  cam.x = 0; cam.y = 0;
+  cam.scale = Math.min(140, Math.max(30, Math.min(window.innerWidth, window.innerHeight) / 8));
+  draw();
+});
+$('#gridBtn').addEventListener('click', ()=>{
+  gridOn = !gridOn; draw();
+});
+$('#styleBtn').addEventListener('click', ()=>{
+  styleIndex = (styleIndex + 1) % styles.length; draw(true);
+});
+$('#zoomIn').addEventListener('click', ()=>{ zoomAt(1.25, width/2, height/2); });
+$('#zoomOut').addEventListener('click', ()=>{ zoomAt(1/1.25, width/2, height/2); });
+$('#reset').addEventListener('click', ()=>{
+  cam.x = 0; cam.y = 0; cam.scale = 60; draw();
+});
+
+/* Equation input handling */
+eqInput.addEventListener('keydown', e=>{
+  if(e.key === 'Enter'){
+    setEquation(eqInput.value);
+    eqInput.blur();
+  }
+});
+eqInput.addEventListener('blur', ()=>{
+  // try compile on blur
+  try { setEquation(eqInput.value); } catch(e){}
+});
+
+/* Initialize default */
+eqInput.value = equations[0];
+
+/* Responsive */
+window.addEventListener('resize', resize);
+document.fonts?.ready?.then(resize);
+resize();
+
+/* Initial draw (animated subtle) */
+(function initAnimation(){
+  // do a gentle reveal
+  let a = 0;
+  const animate = ()=>{
+    a = Math.min(1, a + 0.06);
+    // slight parallax shift for elegance
+    lastDrawStyle = -1;
+    draw(true);
+    if(a < 1) requestAnimationFrame(animate);
+  };
+  animate();
+})();
+
+/* Accessibility: keyboard pan/zoom */
+window.addEventListener('keydown', e=>{
+  const step = 0.12;
+  if(e.key === 'ArrowLeft') { cam.x -= step * (width / cam.scale); draw(); }
+  if(e.key === 'ArrowRight'){ cam.x += step * (width / cam.scale); draw(); }
+  if(e.key === 'ArrowUp'){ cam.y += step * (height / cam.scale); draw(); }
+  if(e.key === 'ArrowDown'){ cam.y -= step * (height / cam.scale); draw(); }
+  if(e.key === '+' || e.key === '='){ zoomAt(1.15, width/2, height/2); }
+  if(e.key === '-' ){ zoomAt(1/1.15, width/2, height/2); }
+});
+
+/* On load: attempt to parse any example in querystring ?f=
+   e.g. graph.html?f=sin(x)
+*/
+(function loadFromQuery(){
+  try{
+    const q = new URLSearchParams(location.search);
+    const f = q.get('f');
+    if(f){ setEquation(decodeURIComponent(f)); }
+  }catch(e){}
+})();
+
+/* End of script */
+</script>
+</body>
+  </html>
